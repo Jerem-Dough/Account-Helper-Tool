@@ -1,75 +1,62 @@
 package nopk;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-
-import org.json.JSONArray;
+import java.util.ArrayList;
+import java.util.List;
 import org.json.JSONObject;
 
-public class GoogleAPIHandler {
-    private static final String API_KEY = "API";
+public class BusinessMatcher {
 
-    public static String queryBusiness(String name, String address) throws Exception {
-        String query = name + " " + address; // Combine name and address for query
-        String endpoint = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json";
-        String encodedQuery = URLEncoder.encode(query, "UTF-8");
-        String url = endpoint + "?input=" + encodedQuery + "&inputtype=textquery&fields=name,formatted_address&key=" + API_KEY;
+    public static List<String[]> matchBusinesses(List<String[]> inputData) {
+        List<String[]> outputData = new ArrayList<>();
+        outputData.add(new String[]{"Name", "Address", "Status"}); // Header row
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("GET");
+        for (String[] row : inputData) {
+            if (row.length < 12) {
+                System.out.println("Skipped row: Insufficient columns");
+                continue;
+            }
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode != 200) {
-            throw new Exception("Failed to query API: HTTP error code " + responseCode);
+            String name = row[6]; // Column G: `Name`
+            String address1 = row[10]; // Column K: `Address 1`
+            String address2 = row[11]; // Column L: `Address 2`
+
+            // Validate addresses
+            String validAddress = isValidAddress(address1) ? address1 : isValidAddress(address2) ? address2 : null;
+
+            if (validAddress == null) {
+                System.out.println("Skipped row: Invalid address for " + name);
+                outputData.add(new String[]{name, "No valid address", "Skipped"});
+                continue;
+            }
+
+            // Query Google API
+            try {
+                String apiResponse = GoogleAPIHandler.queryBusiness(name, validAddress);
+                JSONObject jsonResponse = new JSONObject(apiResponse);
+
+                String status = jsonResponse.optString("status", "Unknown");
+                if (!status.equals("OK")) {
+                    outputData.add(new String[]{name, validAddress, "No match found"});
+                    continue;
+                }
+
+                JSONObject candidate = jsonResponse.getJSONArray("candidates").optJSONObject(0);
+                if (candidate != null) {
+                    String formattedName = candidate.optString("name", name);
+                    String formattedAddress = candidate.optString("formatted_address", validAddress);
+                    outputData.add(new String[]{formattedName, formattedAddress, "OK"});
+                } else {
+                    outputData.add(new String[]{name, validAddress, "No candidates found"});
+                }
+            } catch (Exception e) {
+                System.err.println("Error querying Google API for " + name + ": " + e.getMessage());
+                outputData.add(new String[]{name, validAddress, "Error querying API"});
+            }
         }
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
-        }
-        reader.close();
-
-        return parseResponse(response.toString(), name, address);
+        return outputData;
     }
 
-    private static String parseResponse(String jsonResponse, String originalName, String originalAddress) {
-        try {
-            JSONObject jsonObject = new JSONObject(jsonResponse);
-
-            // Check API status
-            String status = jsonObject.optString("status", "UNKNOWN");
-            if (!status.equals("OK")) {
-                return "{\"status\":\"" + status + "\",\"error\":\"No match found\"}";
-            }
-
-            // Validate existence of candidates array
-            if (!jsonObject.has("candidates") || jsonObject.getJSONArray("candidates").isEmpty()) {
-                return "{\"status\":\"OK\",\"error\":\"No candidates found\"}";
-            }
-
-            // Extract first candidate
-            JSONArray candidates = jsonObject.getJSONArray("candidates");
-            JSONObject candidate = candidates.optJSONObject(0); // Safely get the first candidate
-            if (candidate == null) {
-                return "{\"status\":\"OK\",\"error\":\"No candidates found\"}";
-            }
-
-            String matchedName = candidate.optString("name", originalName);
-            String matchedAddress = candidate.optString("formatted_address", originalAddress);
-
-            // Return structured JSON response
-            return new JSONObject()
-                    .put("status", "OK")
-                    .put("name", matchedName)
-                    .put("address", matchedAddress)
-                    .toString();
-        } catch (Exception e) {
-            return "{\"status\":\"ERROR\",\"error\":\"" + e.getMessage() + "\"}";
-        }
+    private static boolean isValidAddress(String address) {
+        return address != null && address.matches(".*\\d.*"); // Address contains at least one digit
     }
 }
