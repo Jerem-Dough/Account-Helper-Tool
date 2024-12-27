@@ -17,39 +17,35 @@ public class AccountHelper {
 
             // Process each record
             List<String[]> processedData = new ArrayList<>();
-            processedData.add(new String[]{"Name", "Address", "Google API Response"}); // Add header row
+            processedData.add(new String[]{"Formatted Name", "Formatted Address", "Status"}); // Add header row
 
             for (String[] record : records) {
-                // Safely extract required fields
-                String name = record.length > 6 ? record[6].trim() : null; // Column G: `Name`
-                String address1 = record.length > 10 ? record[10].trim() : null; // Column K: `Address 1`
-                String address2 = record.length > 11 ? record[11].trim() : null; // Column L: `Address 2`
-
-                // Check for missing data
-                if ((name == null || name.isEmpty()) || 
-                    ((address1 == null || address1.isEmpty()) && (address2 == null || address2.isEmpty()))) {
-                    System.out.println("Skipped row: missing Name or Address");
-                    processedData.add(new String[]{name != null ? name : "Unknown", "No valid address", "Skipped"});
-                    continue;
+                // Ensure the record has at least 15 columns for all required fields
+                if (record.length < 15) {
+                    System.out.println("Skipped row: Insufficient data");
+                    continue; // Skip rows with insufficient data
                 }
 
+                String name = record[6]; // Column G: `Name`
+                String address1 = record[10]; // Column K: `Address 1`
+                String address2 = record[11]; // Column L: `Address 2`
+                String city = record[12]; // Column M: `City`
+                String state = record[13]; // Column N: `State`
+                String zip = record[14]; // Column O: `Zip Code`
+
                 // Validate addresses
-                String validAddress = null;
-                if (isValidAddress(address1)) {
-                    validAddress = address1; // Use Address 1 if valid
-                } else if (isValidAddress(address2)) {
-                    validAddress = address2; // Fallback to Address 2 if Address 1 is invalid
-                    System.out.println("Fallback: using Address 2 for " + name);
-                } else {
-                    System.out.println("Skipped row: invalid addresses for " + name);
+                String validAddress = isValidAddress(address1) ? address1 : isValidAddress(address2) ? address2 : null;
+
+                if (validAddress == null) {
+                    System.out.println("Skipped row: Invalid addresses for " + name);
                     processedData.add(new String[]{name, "No valid address", "Skipped"});
-                    continue;
+                    continue; // Skip if neither address is valid
                 }
 
                 // Query Google API
                 String response;
                 try {
-                    response = GoogleAPIHandler.queryBusiness(name, validAddress);
+                    response = GoogleAPIHandler.queryBusiness(name, validAddress, city, state, zip);
                 } catch (Exception e) {
                     response = "Error querying API: " + e.getMessage();
                 }
