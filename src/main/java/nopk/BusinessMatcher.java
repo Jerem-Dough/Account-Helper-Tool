@@ -9,7 +9,7 @@ public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Found Name", "Found Address", "Status"}); // Updated header row
+        outputData.add(new String[]{"Name", "Address", "Status"}); // Header row
 
         Pattern addressPattern = Pattern.compile(".*\\d+.*"); // Regex to check for numbers in the address
 
@@ -19,15 +19,9 @@ public class BusinessMatcher {
                 continue;
             }
 
-            String name = row[6].trim(); // Column G: `Name`
-            String address1 = row[10].trim(); // Column K: `Address 1`
-            String address2 = row[11].trim(); // Column L: `Address 2`
-
-            // Explicitly skip placeholder rows
-            if (name.equalsIgnoreCase("name") || address1.equalsIgnoreCase("address 1")) {
-                System.out.println("Skipped row: Placeholder data");
-                continue; // Skip entirely
-            }
+            String name = row[6]; // Column G: `Name`
+            String address1 = row[10]; // Column K: `Address 1`
+            String address2 = row[11]; // Column L: `Address 2`
 
             // Validate addresses
             String validAddress = null;
@@ -38,7 +32,14 @@ public class BusinessMatcher {
                 System.out.println("Using Address 2 for " + name);
             } else {
                 System.out.println("Skipped row: Invalid address for " + name);
-                continue; // Skip rows with no valid address
+                outputData.add(new String[]{name, "No valid address", "Skipped"});
+                continue;
+            }
+
+            // Skip placeholder rows
+            if ("Name".equalsIgnoreCase(name) && "Address 1".equalsIgnoreCase(validAddress)) {
+                System.out.println("Skipped row: Placeholder data for Name and Address 1");
+                continue;
             }
 
             // Query Google API
@@ -50,12 +51,22 @@ public class BusinessMatcher {
                 String formattedAddress = extractField(apiResponse, "formatted_address");
                 String status = extractField(apiResponse, "status");
 
+                System.out.println("API Response: " + apiResponse);
+                System.out.println("Formatted Name: " + formattedName);
+                System.out.println("Formatted Address: " + formattedAddress);
+                System.out.println("Status: " + status);
+
                 if (formattedName == null || formattedAddress == null) {
                     System.out.println("Incomplete data from API for " + name);
                     continue; // Skip rows with incomplete data
                 }
 
-                outputData.add(new String[]{formattedName, formattedAddress, status != null ? status : "OK"});
+                outputData.add(new String[]{
+                        formattedName != null ? formattedName : name,
+                        formattedAddress != null ? formattedAddress : validAddress,
+                        status != null ? status : "OK"
+                });
+
                 System.out.println("Processed: " + name + " -> " + status);
             } catch (Exception e) {
                 System.err.println("Error querying Google API for " + name + ": " + e.getMessage());
