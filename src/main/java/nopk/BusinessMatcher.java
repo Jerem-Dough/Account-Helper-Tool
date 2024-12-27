@@ -16,9 +16,9 @@ public class BusinessMatcher {
                 continue;
             }
 
-            String name = row[6]; // Column G: `Name`
-            String address1 = row[10]; // Column K: `Address 1`
-            String address2 = row[11]; // Column L: `Address 2`
+            String name = row[6].trim(); // Column G: `Name`
+            String address1 = row[10].trim(); // Column K: `Address 1`
+            String address2 = row[11].trim(); // Column L: `Address 2`
 
             // Validate addresses
             String validAddress = isValidAddress(address1) ? address1 : isValidAddress(address2) ? address2 : null;
@@ -31,10 +31,13 @@ public class BusinessMatcher {
 
             // Query Google API
             try {
+                System.out.println("Querying Google API: Name: " + name + ", Address: " + validAddress);
                 String apiResponse = GoogleAPIHandler.queryBusiness(name, validAddress);
-                JSONObject jsonResponse = new JSONObject(apiResponse);
 
+                // Parse the API response
+                JSONObject jsonResponse = new JSONObject(apiResponse);
                 String status = jsonResponse.optString("status", "UNKNOWN");
+
                 if (!"OK".equalsIgnoreCase(status)) {
                     outputData.add(new String[]{name, validAddress, "No match found"});
                     continue;
@@ -42,13 +45,13 @@ public class BusinessMatcher {
 
                 // Extract the first candidate
                 JSONArray candidates = jsonResponse.optJSONArray("candidates");
-                JSONObject candidate = (candidates != null && candidates.length() > 0) ? candidates.optJSONObject(0) : null;
-
-                if (candidate != null) {
+                if (candidates != null && candidates.length() > 0) {
+                    JSONObject candidate = candidates.optJSONObject(0);
                     String formattedName = candidate.optString("name", name);
                     String formattedAddress = candidate.optString("formatted_address", validAddress);
                     outputData.add(new String[]{formattedName, formattedAddress, "OK"});
                 } else {
+                    System.out.println("No candidates found for: " + name + " at " + validAddress);
                     outputData.add(new String[]{name, validAddress, "No candidates found"});
                 }
             } catch (Exception e) {
@@ -60,6 +63,6 @@ public class BusinessMatcher {
     }
 
     private static boolean isValidAddress(String address) {
-        return address != null && address.matches(".*\\d.*"); // Address contains at least one digit
+        return address != null && !address.isEmpty() && address.matches(".*\\d.*"); // Address contains at least one digit
     }
 }
