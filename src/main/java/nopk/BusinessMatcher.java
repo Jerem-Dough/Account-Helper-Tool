@@ -2,17 +2,17 @@ package nopk;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Name", "Address", "Status"}); // Header row
 
         for (String[] row : inputData) {
-            if (row.length < 12) {
-                System.out.println("Skipped row: Insufficient columns");
+            // Skip header rows or invalid rows
+            if (row.length < 12 || "Name".equalsIgnoreCase(row[6])) {
                 continue;
             }
 
@@ -34,13 +34,16 @@ public class BusinessMatcher {
                 String apiResponse = GoogleAPIHandler.queryBusiness(name, validAddress);
                 JSONObject jsonResponse = new JSONObject(apiResponse);
 
-                String status = jsonResponse.optString("status", "Unknown");
-                if (!status.equals("OK")) {
+                String status = jsonResponse.optString("status", "UNKNOWN");
+                if (!"OK".equalsIgnoreCase(status)) {
                     outputData.add(new String[]{name, validAddress, "No match found"});
                     continue;
                 }
 
-                JSONObject candidate = jsonResponse.getJSONArray("candidates").optJSONObject(0);
+                // Extract the first candidate
+                JSONArray candidates = jsonResponse.optJSONArray("candidates");
+                JSONObject candidate = (candidates != null && candidates.length() > 0) ? candidates.optJSONObject(0) : null;
+
                 if (candidate != null) {
                     String formattedName = candidate.optString("name", name);
                     String formattedAddress = candidate.optString("formatted_address", validAddress);
