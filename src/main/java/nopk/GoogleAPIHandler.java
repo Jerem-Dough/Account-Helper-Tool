@@ -33,6 +33,10 @@ public class GoogleAPIHandler {
         }
         reader.close();
 
+        // Log raw API response for debugging
+        System.out.println("Query: " + query);
+        System.out.println("Raw API Response: " + response.toString());
+
         return parseResponse(response.toString(), name, address);
     }
 
