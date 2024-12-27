@@ -6,6 +6,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class GoogleAPIHandler {
@@ -33,39 +34,38 @@ public class GoogleAPIHandler {
         }
         reader.close();
 
-        // Log raw API response for debugging
-        System.out.println("Query: " + query);
-        System.out.println("Raw API Response: " + response.toString());
-
-        return parseResponse(response.toString(), name, address);
+        return parseResponse(response.toString());
     }
 
-    private static String parseResponse(String jsonResponse, String originalName, String originalAddress) {
+    private static String parseResponse(String jsonResponse) {
         try {
             JSONObject jsonObject = new JSONObject(jsonResponse);
 
             // Check API status
             String status = jsonObject.optString("status", "UNKNOWN");
-            if (!status.equals("OK")) {
+            if (!"OK".equals(status)) {
                 return "{\"status\":\"" + status + "\",\"error\":\"No match found\"}";
             }
 
             // Check for candidates and extract the first one
-            if (jsonObject.has("candidates") && jsonObject.getJSONArray("candidates").length() > 0) {
-                JSONObject candidate = jsonObject.getJSONArray("candidates").getJSONObject(0);
-
-                String matchedName = candidate.optString("name", originalName);
-                String matchedAddress = candidate.optString("formatted_address", originalAddress);
-
-                // Return structured JSON response
-                return new JSONObject()
-                        .put("status", "OK")
-                        .put("name", matchedName)
-                        .put("address", matchedAddress)
-                        .toString();
+            JSONArray candidates = jsonObject.optJSONArray("candidates");
+            if (candidates == null || candidates.length() == 0) {
+                return "{\"status\":\"OK\",\"error\":\"No candidates found\"}";
             }
 
-            return "{\"status\":\"OK\",\"error\":\"No candidates found\"}";
+            JSONObject candidate = candidates.optJSONObject(0);
+            if (candidate == null) {
+                return "{\"status\":\"OK\",\"error\":\"Candidate parsing failed\"}";
+            }
+
+            String matchedName = candidate.optString("name", "Unknown Name");
+            String matchedAddress = candidate.optString("formatted_address", "Unknown Address");
+
+            return new JSONObject()
+                    .put("status", "OK")
+                    .put("name", matchedName)
+                    .put("address", matchedAddress)
+                    .toString();
         } catch (Exception e) {
             return "{\"status\":\"ERROR\",\"error\":\"" + e.getMessage() + "\"}";
         }
