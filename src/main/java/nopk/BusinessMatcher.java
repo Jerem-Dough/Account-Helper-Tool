@@ -9,20 +9,27 @@ public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Found Name", "Found Address", "Status"}); // Updated header row
+        outputData.add(new String[]{"Name", "Address", "Status"}); // Header row
 
         Pattern addressPattern = Pattern.compile(".*\\d+.*"); // Regex to check for numbers in the address
 
         for (String[] row : inputData) {
             if (row.length < 12) {
                 System.out.println("Skipped row: Insufficient columns");
-                outputData.add(new String[]{"Insufficient Data", "N/A", "Skipped"});
+                outputData.add(new String[]{"Insufficient data", "N/A", "Skipped"});
                 continue;
             }
 
             String name = row[6]; // Column G: `Name`
             String address1 = row[10]; // Column K: `Address 1`
             String address2 = row[11]; // Column L: `Address 2`
+
+            // Explicit skip logic for placeholder data
+            if (name.equalsIgnoreCase("name") || address1.equalsIgnoreCase("address 1")) {
+                System.out.println("Skipped row: Placeholder data for " + name);
+                outputData.add(new String[]{name, address1, "Skipped: Placeholder Data"});
+                continue;
+            }
 
             // Validate addresses
             String validAddress = null;
@@ -44,9 +51,8 @@ public class BusinessMatcher {
                 // Extract fields from the response
                 String formattedName = extractField(apiResponse, "name");
                 String formattedAddress = extractField(apiResponse, "formatted_address");
-                String status = extractStatus(apiResponse);
+                String status = extractField(apiResponse, "status");
 
-                // Handle incomplete data
                 if (formattedName == null || formattedAddress == null || status == null) {
                     System.out.println("Incomplete data from API for " + name);
                     outputData.add(new String[]{name, validAddress, "Incomplete data"});
@@ -73,19 +79,7 @@ public class BusinessMatcher {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error parsing JSON response for field " + fieldName + ": " + e.getMessage());
-        }
-        return null;
-    }
-
-    private static String extractStatus(String response) {
-        try {
-            JSONObject jsonResponse = new JSONObject(response);
-            if (jsonResponse.has("status")) {
-                return jsonResponse.getString("status");
-            }
-        } catch (Exception e) {
-            System.err.println("Error parsing JSON response for status: " + e.getMessage());
+            System.err.println("Error parsing JSON response: " + e.getMessage());
         }
         return null;
     }
