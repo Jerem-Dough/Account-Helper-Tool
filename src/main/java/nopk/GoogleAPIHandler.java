@@ -6,11 +6,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import org.json.JSONObject;
 
 public class GoogleAPIHandler {
-    private static final String API_KEY = "API";
+    private static final String API_KEY = "API"; // Replace with your actual API key
 
     public static String queryBusiness(String name, String address) throws Exception {
         String query = name + " " + address; // Combine name and address for query
@@ -37,22 +36,34 @@ public class GoogleAPIHandler {
         return parseResponse(response.toString(), name, address);
     }
 
-    private static String parseResponse(String jsonResponse, String name, String address) {
+    private static String parseResponse(String jsonResponse, String originalName, String originalAddress) {
         try {
-            JsonObject jsonObject = JsonParser.parseString(jsonResponse).getAsJsonObject();
-            String status = jsonObject.get("status").getAsString();
+            JSONObject jsonObject = new JSONObject(jsonResponse);
 
+            // Check API status
+            String status = jsonObject.optString("status", "UNKNOWN");
             if (!status.equals("OK")) {
-                return "No match found (status: " + status + ")";
+                return "{\"status\":\"" + status + "\",\"error\":\"No match found\"}";
             }
 
-            JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
-            String matchedName = candidate.get("name").getAsString();
-            String matchedAddress = candidate.get("formatted_address").getAsString();
+            // Check for candidates and extract the first one
+            if (jsonObject.has("candidates") && jsonObject.getJSONArray("candidates").length() > 0) {
+                JSONObject candidate = jsonObject.getJSONArray("candidates").getJSONObject(0);
 
-            return "Matched Name: " + matchedName + ", Matched Address: " + matchedAddress;
+                String matchedName = candidate.optString("name", originalName);
+                String matchedAddress = candidate.optString("formatted_address", originalAddress);
+
+                // Return structured JSON response
+                return new JSONObject()
+                        .put("status", "OK")
+                        .put("name", matchedName)
+                        .put("address", matchedAddress)
+                        .toString();
+            }
+
+            return "{\"status\":\"OK\",\"error\":\"No candidates found\"}";
         } catch (Exception e) {
-            return "Error parsing API response: " + e.getMessage();
+            return "{\"status\":\"ERROR\",\"error\":\"" + e.getMessage() + "\"}";
         }
     }
 }
