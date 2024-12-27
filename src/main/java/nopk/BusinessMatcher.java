@@ -9,13 +9,14 @@ public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Name", "Address", "Status"}); // Header row
+        outputData.add(new String[]{"Found Name", "Found Address", "Status"}); // Updated header row
 
         Pattern addressPattern = Pattern.compile(".*\\d+.*"); // Regex to check for numbers in the address
 
         for (String[] row : inputData) {
             if (row.length < 12) {
                 System.out.println("Skipped row: Insufficient columns");
+                outputData.add(new String[]{"Insufficient Data", "N/A", "Skipped"});
                 continue;
             }
 
@@ -43,8 +44,9 @@ public class BusinessMatcher {
                 // Extract fields from the response
                 String formattedName = extractField(apiResponse, "name");
                 String formattedAddress = extractField(apiResponse, "formatted_address");
-                String status = extractField(apiResponse, "status");
+                String status = extractStatus(apiResponse);
 
+                // Handle incomplete data
                 if (formattedName == null || formattedAddress == null || status == null) {
                     System.out.println("Incomplete data from API for " + name);
                     outputData.add(new String[]{name, validAddress, "Incomplete data"});
@@ -71,7 +73,19 @@ public class BusinessMatcher {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error parsing JSON response: " + e.getMessage());
+            System.err.println("Error parsing JSON response for field " + fieldName + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static String extractStatus(String response) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            if (jsonResponse.has("status")) {
+                return jsonResponse.getString("status");
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing JSON response for status: " + e.getMessage());
         }
         return null;
     }
