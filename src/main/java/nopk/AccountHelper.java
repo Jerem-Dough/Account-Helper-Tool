@@ -20,15 +20,18 @@ public class AccountHelper {
             processedData.add(new String[]{"Name", "Address", "Google API Response"}); // Add header row
 
             for (String[] record : records) {
-                // Ensure the record has at least 12 columns to access indices 6 (G), 10 (K), and 11 (L)
-                if (record.length < 12) {
-                    System.out.println("Skipped row: insufficient data");
-                    continue; // Skip rows with insufficient data
-                }
+                // Safely extract required fields
+                String name = record.length > 6 ? record[6].trim() : null; // Column G: `Name`
+                String address1 = record.length > 10 ? record[10].trim() : null; // Column K: `Address 1`
+                String address2 = record.length > 11 ? record[11].trim() : null; // Column L: `Address 2`
 
-                String name = record[6]; // Column G: `Name`
-                String address1 = record[10]; // Column K: `Address 1`
-                String address2 = record[11]; // Column L: `Address 2`
+                // Check for missing data
+                if ((name == null || name.isEmpty()) || 
+                    ((address1 == null || address1.isEmpty()) && (address2 == null || address2.isEmpty()))) {
+                    System.out.println("Skipped row: missing Name or Address");
+                    processedData.add(new String[]{name != null ? name : "Unknown", "No valid address", "Skipped"});
+                    continue;
+                }
 
                 // Validate addresses
                 String validAddress = null;
@@ -37,11 +40,10 @@ public class AccountHelper {
                 } else if (isValidAddress(address2)) {
                     validAddress = address2; // Fallback to Address 2 if Address 1 is invalid
                     System.out.println("Fallback: using Address 2 for " + name);
-                }
-
-                if (validAddress == null) {
+                } else {
                     System.out.println("Skipped row: invalid addresses for " + name);
-                    continue; // Skip if neither address is valid
+                    processedData.add(new String[]{name, "No valid address", "Skipped"});
+                    continue;
                 }
 
                 // Query Google API
