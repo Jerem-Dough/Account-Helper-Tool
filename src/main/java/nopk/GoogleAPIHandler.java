@@ -9,7 +9,7 @@ import java.net.URLEncoder;
 import org.json.JSONObject;
 
 public class GoogleAPIHandler {
-    private static final String API_KEY = "AIzaSyBhkIa5uQtn4CW2i0SYgDvzjpzKxEnmho8";
+    private static final String API_KEY = "API";
 
     public static String queryBusiness(String name, String address) throws Exception {
         String query = name + " " + address; // Combine name and address for query
