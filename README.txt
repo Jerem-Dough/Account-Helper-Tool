@@ -1,8 +1,6 @@
 Account Helper Tool
 
-  This is a Java-based application designed to streamline business data validation and address processing using the Google Places API. 
-  It processes data from an input .xls file, validates the data with API results, and exports to a processed .xls file. It was created
-  primarily to reduce manual address verification from a company database system, that has .xls file export cababilities. 
+  This Java-based application is designed to streamline business data validation and address processing using the Google Places API. It processes data from an input .xls file, validates it with API results, and exports a processed .xls file. It was created primarily to reduce manual address verification from a company database system, that has .xls file export capabilities. 
 
 Tech Stack
 
@@ -12,7 +10,7 @@ Tech Stack
 
 Deployment
 
-  1. Ensure Java and Maven are installed. Verify environment variables JAVA_HOME and MAVEN_HOME are setup.
+  1. Ensure Java and Maven are installed. Verify environment variables JAVA_HOME and MAVEN_HOME are set up.
   2. Clone the repository: git clone https://github.com/Jerem-Dough/Account-Helper-Tool.git
   3. Navigate to the proper directory: cd Account-Helper-Tool
   4. Install dependencies: mvn clean install
