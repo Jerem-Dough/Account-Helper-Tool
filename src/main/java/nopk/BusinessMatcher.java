@@ -9,22 +9,21 @@ public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Formatted Name", "Formatted Address", "Status"}); // Header row
+        outputData.add(new String[]{"Formatted Name", "Formatted Address", "Status"});
 
         for (String[] row : inputData) {
-            // Skip invalid rows
+
             if (row.length < 15 || "Name".equalsIgnoreCase(row[6])) {
                 continue;
             }
 
-            String name = row[6].trim(); // Column G: `Name`
-            String address1 = row[10].trim(); // Column K: `Address 1`
-            String address2 = row[11].trim(); // Column L: `Address 2`
-            String city = row[12].trim(); // Column M: `City`
-            String state = row[13].trim(); // Column N: `State`
-            String zip = row[14].trim(); // Column O: `Zip Code`
+            String name = row[6].trim(); 
+            String address1 = row[10].trim(); 
+            String address2 = row[11].trim(); 
+            String city = row[12].trim(); 
+            String state = row[13].trim(); 
+            String zip = row[14].trim(); 
 
-            // Validate addresses
             String validAddress = isValidAddress(address1) ? address1 : isValidAddress(address2) ? address2 : null;
 
             if (validAddress == null) {
@@ -33,12 +32,10 @@ public class BusinessMatcher {
                 continue;
             }
 
-            // Query Google API
             try {
                 System.out.println("Querying Google API: Name: " + name + ", Address: " + validAddress + ", City: " + city + ", State: " + state + ", Zip: " + zip);
                 String apiResponse = GoogleAPIHandler.queryBusiness(name, validAddress, city, state, zip);
 
-                // Parse the API response
                 JSONObject jsonResponse = new JSONObject(apiResponse);
                 String status = jsonResponse.optString("status", "UNKNOWN");
 
@@ -48,7 +45,6 @@ public class BusinessMatcher {
                     continue;
                 }
 
-                // Extract the first candidate
                 JSONArray candidates = jsonResponse.optJSONArray("candidates");
                 if (candidates != null && candidates.length() > 0) {
                     JSONObject candidate = candidates.optJSONObject(0);
@@ -68,6 +64,6 @@ public class BusinessMatcher {
     }
 
     private static boolean isValidAddress(String address) {
-        return address != null && address.matches(".*\\d.*"); // Address contains at least one digit
+        return address != null && address.matches(".*\\d.*"); 
     }
 }
