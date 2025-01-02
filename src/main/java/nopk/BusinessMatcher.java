@@ -1,7 +1,10 @@
 package nopk;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -9,65 +12,102 @@ public class BusinessMatcher {
 
     public static List<String[]> matchBusinesses(List<String[]> inputData) {
         List<String[]> outputData = new ArrayList<>();
-        outputData.add(new String[]{"Formatted Name", "Formatted Address", "Status"}); // Header row
+        outputData.add(new String[]{"Formatted Name", "Formatted Address", "Status", "Match Source"});
+
+        Set<String> seenEntries = new HashSet<>();
 
         for (String[] row : inputData) {
-            // Skip invalid rows
             if (row.length < 15 || "Name".equalsIgnoreCase(row[6])) {
                 continue;
             }
 
-            String name = row[6].trim(); // Column G: `Name`
-            String address1 = row[10].trim(); // Column K: `Address 1`
-            String address2 = row[11].trim(); // Column L: `Address 2`
-            String city = row[12].trim(); // Column M: `City`
-            String state = row[13].trim(); // Column N: `State`
-            String zip = row[14].trim(); // Column O: `Zip Code`
+            String name = row[6].trim();
+            String address1 = row[10].trim();
+            String address2 = row[11].trim();
+            String city = row[12].trim();
+            String state = row[13].trim();
+            String zip = row[14].trim();
 
-            // Validate addresses
             String validAddress = isValidAddress(address1) ? address1 : isValidAddress(address2) ? address2 : null;
 
             if (validAddress == null) {
-                System.out.println("Skipped row: Invalid address for " + name);
-                outputData.add(new String[]{name, "No valid address", "Skipped"});
+                outputData.add(new String[]{name, "No valid address", "Skipped", "N/A"});
                 continue;
             }
 
-            // Query Google API
+            boolean foundMatch = false;
+
+            // Primary Search
             try {
-                System.out.println("Querying Google API: Name: " + name + ", Address: " + validAddress + ", City: " + city + ", State: " + state + ", Zip: " + zip);
                 String apiResponse = GoogleAPIHandler.queryBusiness(name, validAddress, city, state, zip);
-
-                // Parse the API response
-                JSONObject jsonResponse = new JSONObject(apiResponse);
-                String status = jsonResponse.optString("status", "UNKNOWN");
-
-                if (!"OK".equalsIgnoreCase(status)) {
-                    System.out.println("No match found for " + name + " at " + validAddress);
-                    outputData.add(new String[]{name, validAddress, "No match found"});
-                    continue;
-                }
-
-                // Extract the first candidate
-                JSONArray candidates = jsonResponse.optJSONArray("candidates");
-                if (candidates != null && candidates.length() > 0) {
-                    JSONObject candidate = candidates.optJSONObject(0);
-                    String formattedName = candidate.optString("name", name);
-                    String formattedAddress = candidate.optString("formatted_address", validAddress);
-                    outputData.add(new String[]{formattedName, formattedAddress, "OK"});
-                } else {
-                    System.out.println("No candidates found for " + name + " at " + validAddress);
-                    outputData.add(new String[]{name, validAddress, "No candidates found"});
-                }
+                foundMatch = processApiResponse(name, validAddress, apiResponse, "Primary Search", outputData, seenEntries);
             } catch (Exception e) {
-                System.err.println("Error querying Google API for " + name + ": " + e.getMessage());
-                outputData.add(new String[]{name, validAddress, "Error querying API"});
+                System.err.println("Error during Primary Search for " + name + ": " + e.getMessage());
+            }
+
+            // Fallback Search
+            if (!foundMatch) {
+                try {
+                    String fallbackResponse = GoogleAPIHandler.fallbackQuery(name, city, state, zip);
+                    foundMatch = processApiResponse(name, validAddress, fallbackResponse, "Fallback Search", outputData, seenEntries);
+                } catch (Exception e) {
+                    System.err.println("Error during Fallback Search for " + name + ": " + e.getMessage());
+                }
+            }
+
+            // No Match Found
+            if (!foundMatch) {
+                outputData.add(new String[]{name, validAddress, "No match found", "N/A"});
             }
         }
+
         return outputData;
     }
 
+    private static boolean processApiResponse(
+            String name,
+            String validAddress,
+            String apiResponse,
+            String source,
+            List<String[]> outputData,
+            Set<String> seenEntries) {
+        try {
+            JSONObject jsonResponse = new JSONObject(apiResponse);
+            String status = jsonResponse.optString("status", "UNKNOWN");
+
+            if (!"OK".equalsIgnoreCase(status)) {
+                return false;
+            }
+
+            JSONArray candidates = jsonResponse.optJSONArray("candidates");
+            if (candidates != null && candidates.length() > 0) {
+                JSONObject candidate = candidates.optJSONObject(0);
+                String formattedName = candidate.optString("name", name);
+                String formattedAddress = candidate.optString("formatted_address", validAddress);
+
+                if (isLikelyAddress(formattedName)) {
+                    System.out.println("Address-like entry detected in Formatted Name for " + name + ", retrying with fallback...");
+                    return false;
+                }
+
+                String uniqueEntry = formattedName + "|" + formattedAddress;
+                if (!seenEntries.contains(uniqueEntry)) {
+                    seenEntries.add(uniqueEntry);
+                    outputData.add(new String[]{formattedName, formattedAddress, "OK", source});
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing API response: " + e.getMessage());
+        }
+        return false;
+    }
+
     private static boolean isValidAddress(String address) {
-        return address != null && address.matches(".*\\d.*"); // Address contains at least one digit
+        return address != null && address.matches(".*\\d.*");
+    }
+
+    private static boolean isLikelyAddress(String nameOrAddress) {
+        return nameOrAddress.matches(".*\\d{1,5}.*") || nameOrAddress.matches(".*(St|Ave|Blvd|Rd|Dr|Ln|Ct|Way|Pl|Circle).*");
     }
 }

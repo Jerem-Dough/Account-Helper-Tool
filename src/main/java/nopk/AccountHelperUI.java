@@ -50,13 +50,10 @@ public class AccountHelperUI extends Application {
                 FileHandler fileHandler = new FileHandler();
                 BusinessMatcher businessMatcher = new BusinessMatcher();
 
-                // Read input file
                 List<String[]> records = fileHandler.readExcelFile(inputFilePath);
 
-                // Process each record with improved logic
                 List<String[]> processedData = businessMatcher.matchBusinesses(records);
 
-                // Write to output file
                 fileHandler.writeExcelFile(outputFilePath, processedData);
 
                 showAlert(AlertType.INFORMATION, "Processing Complete", 
