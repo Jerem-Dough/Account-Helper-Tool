@@ -5,6 +5,7 @@ import java.util.List;
 
 public class AccountHelper {
     public static void main(String[] args) {
+
         String inputFilePath = "path/to/your/input/file.xls";
         String outputFilePath = "path/to/your/output/file_processed.xls";
 
@@ -14,6 +15,7 @@ public class AccountHelper {
             List<String[]> records = fileHandler.readExcelFile(inputFilePath);
 
             List<String[]> processedData = new ArrayList<>();
+
             processedData.add(new String[]{"Formatted Name", "Formatted Address", "Status"});
 
             for (String[] record : records) {
@@ -34,8 +36,8 @@ public class AccountHelper {
 
                 if (validAddress == null) {
                     System.out.println("Skipped row: Invalid addresses for " + name);
-                    processedData.add(new String[]{name, "No valid address", "Skipped"});
-                    continue;
+                    processedData.add(new String[]{name, "No valid address", "Skipped"});                 
+                    continue;                  
                 }
 
                 String response;
