@@ -12,8 +12,29 @@ public class GoogleAPIHandler {
     private static final String API_KEY = "API";
 
     public static String queryBusiness(String name, String address, String city, String state, String zip) throws Exception {
-        // Combine name, address, city, state, and ZIP for a more specific query
         String query = name + " " + address + " " + city + " " + state + " " + zip;
+        return performSearch(query);
+    }
+
+    public static String fallbackQuery(String name, String city, String state, String zip) throws Exception {
+        String[] fallbackQueries = {
+            name + " " + city + " " + state + " " + zip,
+            name + " " + city + " " + state,
+            name + " " + city
+        };
+
+        for (String query : fallbackQueries) {
+            String response = performSearch(query);
+            JSONObject jsonResponse = new JSONObject(response);
+            if ("OK".equalsIgnoreCase(jsonResponse.optString("status", "UNKNOWN"))) {
+                return response;
+            }
+        }
+
+        return "{\"status\":\"ZERO_RESULTS\"}";
+    }
+
+    private static String performSearch(String query) throws Exception {
         String endpoint = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json";
         String encodedQuery = URLEncoder.encode(query.trim(), "UTF-8");
         String url = endpoint + "?input=" + encodedQuery + "&inputtype=textquery&fields=name,formatted_address&key=" + API_KEY;
