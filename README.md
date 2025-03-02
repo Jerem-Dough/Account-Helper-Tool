@@ -4,9 +4,9 @@
 
 ## **Tech Stack**
 
-Language: Java  
-Libraries: Apache POI, org.json  
-API: Google Places API  
+- Language: Java  
+- Libraries: Apache POI, org.json  
+- API: Google Places API  
 
 
 ## **Deployment**
