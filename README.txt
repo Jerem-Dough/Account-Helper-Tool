@@ -1,6 +1,6 @@
 Account Helper Tool
 
-  This Java-based application is designed to streamline business data validation and address processing using the Google Places API. It processes data from an input .xls file, validates it with API results, and exports a processed .xls file. It was created primarily to reduce manual address verification from a company database system, that has .xls file export capabilities. 
+  This Java-based application is designed to streamline business data validation and address processing using the Google Places API. It processes data from an input .xls file, validates it with API results, and exports a processed .xls file. It was created primarily to reduce manual address verification from a company database system that has .xls file export capabilities. 
 
 Tech Stack
 
