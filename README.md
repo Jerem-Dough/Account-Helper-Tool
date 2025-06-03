@@ -9,7 +9,7 @@
 - API: Google Places API  
 
 
-## **Deployment**
+## **Local Deployment**
 
   1. Ensure Java and Maven are installed. Verify environment variables JAVA_HOME and MAVEN_HOME are set up.
   2. Clone the repository: git clone https://github.com/Jerem-Dough/Account-Helper-Tool.git
